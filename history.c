@@ -42,12 +42,24 @@ HistoryNode *createHistoryNode(const char *action)
 void pushHistory(const char *action)
 {
     HistoryNode *newNode = createHistoryNode(action);
+    if(!newNode) return;
 
     newNode->next = historyTop;
     historyTop = newNode;
 }
 
-void printHistory() 
+void pushLoadedHistory(const char *time, const char *action)
+{
+    HistoryNode *newNode = (HistoryNode *)malloc(sizeof(HistoryNode));
+    if(!newNode) return;
+
+    newNode->time = strdup(time);
+    newNode->action = strdup(action);
+    newNode->next = historyTop;
+    historyTop = newNode;
+}
+
+void printHistory(void) 
 {
     printf("========== Action History ==========\n");
     HistoryNode *current = historyTop;
@@ -61,7 +73,7 @@ void printHistory()
     }
 }
 
-void freeHistory()
+void freeHistory(void)
 {
     HistoryNode *current = historyTop;
     while(current)
@@ -109,6 +121,12 @@ void loadFromFileHistory(const char *filename)
         char *token;
         char *historyTime = strtok(line, ",\n");
         char *historyAction = strtok(NULL, "\n");
+
+        trim(historyTime);
+        trim(historyAction);
+
+        if(historyTime && historyAction) pushLoadedHistory(historyTime, historyAction);
     }
 
+    fclose(file);
 }

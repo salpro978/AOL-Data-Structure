@@ -2,8 +2,9 @@
 
 int main()
 {
-    loadFromFile("daftarkata.txt");
+    loadFromFileSynonym(SYNONYM_FILE);
+    loadFromFileHistory(HISTORY_FILE);
     menu();
-    freeMemory();
+    freeMemorySynonym();
     return 0;
 }

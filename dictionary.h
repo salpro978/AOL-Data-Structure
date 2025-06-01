@@ -1,6 +1,11 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 #define HASH_SIZE 503
+#define ALPHABET_SIZE 26
+#define SYNONYM_FILE "synonymList.txt"
+#define HISTORY_FILE "history.txt"
+
+#include <stddef.h>
 
 /*
     copy to terminal to create .exe program : 
@@ -21,12 +26,11 @@ typedef struct WordEntry {
     struct WordEntry* next; // untuk collision chaining
 } WordEntry;
 
-// Struktur Stack untuk Undo
-typedef struct UndoAction {
-    char* word;
-    char* synonym;
-    struct UndoAction* next;
-} UndoAction;
+// Trie node untuk sesuai urutan
+typedef struct TrieNode {
+    struct TrieNode *children[ALPHABET_SIZE];
+    int isEndOfWord; // 1 jika akhir kata
+} TrieNode;
 
 typedef struct HistoryNode
 { 
@@ -54,16 +58,22 @@ HistoryNode *createHistoryNode(const char *action);
 unsigned int hash(const char *str);
 
 // synonym.c
-void addSynonym(const char *word, const char *synonym);
-void addWord(const char* str);
+void addSynonym(const char *word, const char *synonym, const int condition);
+void addWord(const char* str, const int condition);
 void printSynonyms(const char* str);
-void saveToFile(const char* filename);
-void loadFromFile(const char* filename);
+void saveToFileSynonym(const char* filename);
+void loadFromFileSynonym(const char* filename);
 void printAllWords(void);
-void freeMemory(void);
+void freeMemorySynonym(void);
 void menu(void);
 
 // history.c
-
+void pushLoadedHistory(const char *time, const char *action);
+void saveToFileHistory(const char *filename);
+void loadFromFileHistory(const char *filename);
+void getCurrentTimestamp(char *buffer, size_t size);
+void pushHistory(const char *action);
+void printHistory(void);
+void freeHistory(void);
 
 #endif

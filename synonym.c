@@ -6,10 +6,6 @@
 #include <ctype.h>
 #include "dictionary.h"
 
-UndoAction *undoStack = NULL;
-HistoryNode *historyFront = NULL;
-HistoryNode *historyRear = NULL;
-
 WordEntry* hashTable[HASH_SIZE] = {0};
 
 static inline void clearScreen(void) {
@@ -99,12 +95,12 @@ WordEntry *findWord(const char *word)
 }
 
 // Tambah kata baru ke hash table
-void addWord(const char *word)
+void addWord(const char *word, const int condition)
 {
     if (findWord(word)){
         printf("Entry word '%s' already exists.\n", word);
         sleep(0.7);
-        return; // Jangan tambah kalau sudah ada
+        return; // return if already exists
     }
 
     unsigned int index = hash(word);
@@ -112,16 +108,27 @@ void addWord(const char *word)
 
     newEntry->next = hashTable[index];
     hashTable[index] = newEntry;
+
+    if(condition)
+    {
+        int len = snprintf(NULL, 0, "create a new entry '%s' into the dictionary", newEntry->word);
+        char *action = malloc(len + 1);
+        if (action) {
+            snprintf(action, len + 1, "create a new entry '%s' into the dictionary", newEntry->word);
+            pushHistory(action);
+            free(action);
+        }
+    }
 }
 
 // Tambah sinonim untuk sebuah kata
-void addSynonym(const char *word, const char *synonym)
+void addSynonym(const char *word, const char *synonym, const int condition)
 {
     WordEntry *entry = findWord(word);
     if (!entry)
     {
-        addWord(word);
-        entry = findWord(word);
+        printf("Word Entry '%s' does not exists.\n", word);
+        return;
     }
 
     SynonymNode *syn = entry->synonyms;
@@ -130,9 +137,21 @@ void addSynonym(const char *word, const char *synonym)
         if(strcmp(syn->word, synonym) == 0) return;
         syn = syn->next;
     }
+
     SynonymNode *newSyn = createSynonymNode(synonym);
     newSyn->next = entry->synonyms;
     entry->synonyms = newSyn;
+
+    if(condition)
+    {
+        int len = snprintf(NULL, 0, "add synonym %s to %s", newSyn->word, entry->word);
+        char *action = malloc(len + 1);
+        if (action) {
+            snprintf(action, len + 1, "add synonym %s to %s", newSyn->word, entry->word);
+            pushHistory(action);
+            free(action); // Jangan lupa membebaskan memori
+        }
+    }
 }
 
 // Tampilkan sinonim dari kata tertentu
@@ -185,7 +204,7 @@ void printAllWords(void)
 }
 
 // Simpan data ke file
-void saveToFile(const char *filename)
+void saveToFileSynonym(const char *filename)
 {
     FILE *file = fopen(filename, "w");
     if (!file)
@@ -216,7 +235,7 @@ void saveToFile(const char *filename)
 }
 
 // Free memory semua node
-void freeMemory(void)
+void freeMemorySynonym(void)
 {
     for (int i = 0; i < HASH_SIZE; i++)
     {
@@ -240,8 +259,9 @@ void freeMemory(void)
 }
 
 // Fungsi untuk load data dari file
-void loadFromFile(const char *filename)
+void loadFromFileSynonym(const char *filename)
 {
+    const int condition = 0;
     FILE *file = fopen(filename, "r");
     if (!file)
     {
@@ -257,7 +277,7 @@ void loadFromFile(const char *filename)
         if (word)
         {
             trim_and_tolower(word);
-            addWord(word);
+            addWord(word, condition);
             token = strtok(NULL, "\n");
             if (token)
             {
@@ -266,7 +286,7 @@ void loadFromFile(const char *filename)
                 {
                     while (*synonym == ' ')
                         synonym++;
-                    addSynonym(word, synonym);
+                    addSynonym(word, synonym, condition);
                     synonym = strtok(NULL, ",");
                 }
             }
@@ -280,15 +300,16 @@ void menu(void)
 {
     int choice;
     char word[100], synonym[100];
+    const int condition = 1;
     do
     {
         printf("Menu:\n");
-        printf("1. Lihat semua kata dan sinonim\n");
-        // printf("1. Lihat semua daftar sinonim\n");
-        printf("2. Cari sinonim kata\n");
-        printf("3. Tambah kata baru\n");
-        printf("4. Tambah sinonim ke kata\n");
-        printf("5. Simpan dan keluar\n");
+        printf("1. View all words and synonyms\n");
+        printf("2. Find synonyms words\n");
+        printf("3. Add new entry word\n");
+        printf("4. Add synonyms to entry words\n");
+        printf("5. View history");
+        printf("6. Save and exit\n");
         printf("Pilihan: ");
         scanf("%d", &choice);
         getchar(); // consume newline
@@ -312,7 +333,7 @@ void menu(void)
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
             trim_and_tolower(word);
-            addWord(word);
+            addWord(word, condition);
             break;
         case 4:
             printf("Masukkan kata: ");
@@ -324,10 +345,14 @@ void menu(void)
             fgets(synonym, sizeof(synonym), stdin);
             synonym[strcspn(synonym, "\n")] = 0;
             trim_and_tocapital(synonym);
-            addSynonym(word, synonym);
+            addSynonym(word, synonym, condition);
             break;
         case 5:
-            saveToFile("daftarkata.txt");
+            printHistory();
+            break;
+        case 6:
+            saveToFileSynonym(SYNONYM_FILE);
+            saveToFileHistory(HISTORY_FILE);
             printf("Data disimpan.\n");
             break;
         default:
@@ -335,5 +360,5 @@ void menu(void)
         }
         sleep(1);
         clearScreen();
-    } while (choice != 5);
+    } while (choice != 6);
 }

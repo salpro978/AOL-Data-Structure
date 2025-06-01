@@ -8,6 +8,12 @@ A command-line application for managing words and their synonyms, built in C. Th
 * [Technologies Used](#technologies-used)
 * [File Structure](#file-structure)
 * [Getting Started](#getting-started)
+  * [1. Obtain the Source Code](#1-obtain-the-source-code)
+  * [2. prerequisites](#2-prerequisites)
+  * [3. Compilation](#3-compilation)
+  * [4. Running the application](#4-running-the-application)
+* [Usage](#usage)
+* [Data Structures](#data-structures)
 
 ## Features
 
