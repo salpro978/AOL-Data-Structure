@@ -41,6 +41,7 @@ typedef struct HistoryNode
 
 // declare global variable
 extern HistoryNode *historyTop;
+extern TrieNode *rootTrie;
 
 // declaration the functions here
 // global
@@ -55,6 +56,7 @@ SynonymNode *createSynonymNode(const char *word);
 WordEntry *createWordEntry(const char *word);
 WordEntry *findWord(const char *word);
 HistoryNode *createHistoryNode(const char *action);
+TrieNode *createTrieNode();
 unsigned int hash(const char *str);
 
 // synonym.c
@@ -65,6 +67,7 @@ void saveToFileSynonym(const char* filename);
 void loadFromFileSynonym(const char* filename);
 void printAllWords(void);
 void freeMemorySynonym(void);
+void freeTrieNode(TrieNode *root);
 void menu(void);
 
 // history.c

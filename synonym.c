@@ -7,6 +7,7 @@
 #include "dictionary.h"
 
 WordEntry* hashTable[HASH_SIZE] = {0};
+TrieNode *rootTrie = NULL;
 
 static inline void clearScreen(void) {
 #ifdef _WIN32
@@ -94,6 +95,31 @@ WordEntry *findWord(const char *word)
     return NULL;
 }
 
+TrieNode *createTrieNode()
+{
+    TrieNode *newNode = (TrieNode*)malloc(sizeof(TrieNode));
+    if(newNode)
+    {
+        newNode->isEndOfWord = 0;
+        for(int i = 0; i < ALPHABET_SIZE; i++)
+            newNode->children[i] = NULL;
+    }
+}
+
+void insertToTrie(TrieNode *root, const char *word)
+{
+    TrieNode *curr = root;
+    while(*word)
+    {
+        int index = *word - 'a';
+        if(curr->children[index] == NULL)
+            curr->children[index] = createTrieNode();
+        curr = curr->children[index];
+        word++;
+    }
+    curr->isEndOfWord = 1;
+}
+
 // Tambah kata baru ke hash table
 void addWord(const char *word, const int condition)
 {
@@ -166,21 +192,25 @@ void printSynonyms(const char *word)
 
     printf("Sinonim dari '%s': ", word);
     SynonymNode *temp = entry->synonyms;
-    printf("%s", temp->word);
-    temp = temp->next;
-    while (temp)
+    if(!temp) {printf("No synonyms recorded.\n");}
+    else 
     {
-        printf(", %s", temp->word);
+        printf("%s", temp->word);
         temp = temp->next;
+        while (temp)
+        {
+            printf(", %s", temp->word);
+            temp = temp->next;
+        }
+        printf("\n");
+        pauseProgram();
     }
-    printf("\n");
-    pauseProgram();
 }
 
 // Tampilkan semua kata dan sinonim
 void printAllWords(void)
 {
-    int order = 1;
+    // int order = 1;
     for (int i = 0; i < HASH_SIZE; i++)
     {
         WordEntry *entry = hashTable[i];
@@ -188,18 +218,59 @@ void printAllWords(void)
         {
             printf("%s: ", entry->word);
             SynonymNode *syn = entry->synonyms;
-            printf("%s", syn->word);
-            syn = syn->next;
-            while (syn)
+            if(!syn)
             {
-                printf(", %s", syn->word);
+                printf("Synonym not found.\n");
+            }
+            else
+            {
+                printf("%s", syn->word);
                 syn = syn->next;
+                while (syn)
+                {
+                    printf(", %s", syn->word);
+                    syn = syn->next;
+                }
             }
             printf("\n");
-
             entry = entry->next;
         }
         // if(entry) printf("%d. %s\n", order++, entry->word);
+    }
+}
+
+void printAllWordsTrieUtil(TrieNode *root, char *buffer, int depth)
+{
+    if(root->isEndOfWord)
+    {
+        buffer[depth] = '\0';
+        printf("%s\n", buffer);
+    }
+
+    for(int i = 0; i < ALPHABET_SIZE; i++)
+    {
+        if(root->children[i]) 
+        {
+            buffer[depth] = 'a' + i;
+            printAllWordsTrieUtil(root->children[i], buffer, depth + 1);
+        }
+    }
+}
+
+void printAllWordsTrie(TrieNode *root)
+{
+    if(!root) return;
+    
+    char buffer[31];
+
+    for (int i = 0; i < ALPHABET_SIZE; i++)
+    {
+        if(root->children[i])
+        {
+            printf("\n---%c---\n", 'A' + i);
+            buffer[0] = 'A' + i;
+            printAllWordsTrieUtil(root->children[i], buffer, 1);    
+        }
     }
 }
 
@@ -258,6 +329,14 @@ void freeMemorySynonym(void)
     }
 }
 
+void freeTrieNode(TrieNode *root)
+{
+    if(root == NULL) return;
+    for(int i = 0; i < ALPHABET_SIZE; i++)
+        freeTrieNode(root->children[i]);
+    free(root);
+}
+
 // Fungsi untuk load data dari file
 void loadFromFileSynonym(const char *filename)
 {
@@ -278,6 +357,8 @@ void loadFromFileSynonym(const char *filename)
         {
             trim_and_tolower(word);
             addWord(word, condition);
+            insertToTrie(rootTrie, word);
+
             token = strtok(NULL, "\n");
             if (token)
             {
@@ -301,15 +382,17 @@ void menu(void)
     int choice;
     char word[100], synonym[100];
     const int condition = 1;
+
     do
     {
         printf("Menu:\n");
         printf("1. View all words and synonyms\n");
-        printf("2. Find synonyms words\n");
-        printf("3. Add new entry word\n");
-        printf("4. Add synonyms to entry words\n");
-        printf("5. View history");
-        printf("6. Save and exit\n");
+        printf("2. View all words entry\n");
+        printf("3. Find synonyms words\n");
+        printf("4. Add new entry word\n");
+        printf("5. Add synonyms to entry words\n");
+        printf("6. View history\n");
+        printf("7. Save and exit\n");
         printf("Pilihan: ");
         scanf("%d", &choice);
         getchar(); // consume newline
@@ -321,6 +404,10 @@ void menu(void)
             pauseProgram();
             break;
         case 2:
+            printAllWordsTrie(rootTrie);
+            pauseProgram();
+            break;
+        case 3:
             printf("Masukkan kata: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
@@ -328,14 +415,14 @@ void menu(void)
             printf("%u\n", hash(word));
             printSynonyms(word);
             break;
-        case 3:
+        case 4:
             printf("Masukkan kata baru: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
             trim_and_tolower(word);
             addWord(word, condition);
             break;
-        case 4:
+        case 5:
             printf("Masukkan kata: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
@@ -347,10 +434,10 @@ void menu(void)
             trim_and_tocapital(synonym);
             addSynonym(word, synonym, condition);
             break;
-        case 5:
+        case 6:
             printHistory();
             break;
-        case 6:
+        case 7:
             saveToFileSynonym(SYNONYM_FILE);
             saveToFileHistory(HISTORY_FILE);
             printf("Data disimpan.\n");
@@ -360,5 +447,5 @@ void menu(void)
         }
         sleep(1);
         clearScreen();
-    } while (choice != 6);
+    } while (choice != 7);
 }
