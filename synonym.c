@@ -412,7 +412,6 @@ void menu(void)
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
             trim_and_tolower(word);
-            printf("%u\n", hash(word));
             printSynonyms(word);
             break;
         case 4:
