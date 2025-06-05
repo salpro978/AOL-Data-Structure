@@ -51,24 +51,40 @@ void pushHistory(const char *action)
 void pushLoadedHistory(const char *time, const char *action)
 {
     HistoryNode *newNode = (HistoryNode *)malloc(sizeof(HistoryNode));
-    if(!newNode) return;
+    if(!newNode) 
+    {
+        perror("Memory allocation failed for HistoryNode (load).\n");
+        return;
+    }
 
     newNode->time = strdup(time);
+    if(!newNode->time)
+    {
+        perror("Memory allocation failed for time (load)\n");
+        return;
+    }
+
     newNode->action = strdup(action);
+    if(!newNode->action)
+    {
+        perror("Memory allocation failed for action (load)\n");
+        return;
+    }
+
     newNode->next = historyTop;
     historyTop = newNode;
 }
 
 void printHistory(void) 
 {
-    printf("========== Action History ==========\n");
+    printf("\n==================================== Action History ====================================\n\n");
     HistoryNode *current = historyTop;
 
     if(!current) printf("Belum ada riwayat.\n");
 
     while(current)
     {
-        printf("%-30s %s", current->time, current->action);
+        printf("%-30s %s\n", current->time, current->action);
         current = current->next;
     }
 }
@@ -122,10 +138,14 @@ void loadFromFileHistory(const char *filename)
         char *historyTime = strtok(line, ",\n");
         char *historyAction = strtok(NULL, "\n");
 
-        trim(historyTime);
-        trim(historyAction);
+        if(historyTime) 
+            trim(historyTime);
 
-        if(historyTime && historyAction) pushLoadedHistory(historyTime, historyAction);
+        if(historyAction)
+            trim(historyAction);
+
+        if (historyTime && historyAction && strlen(historyAction) > 0 && strlen(historyTime) > 0) 
+            pushLoadedHistory(historyTime, historyAction);
     }
 
     fclose(file);

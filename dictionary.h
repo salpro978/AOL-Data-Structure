@@ -40,6 +40,7 @@ typedef struct HistoryNode
 } HistoryNode;
 
 // declare global variable
+extern WordEntry* hashTable[HASH_SIZE];
 extern HistoryNode *historyTop;
 extern TrieNode *rootTrie;
 

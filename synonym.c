@@ -18,12 +18,14 @@ static inline void clearScreen(void) {
 }
 
 static inline void pauseProgram(void) {
-    printf("Tekan Enter untuk melanjutkan...");
+    printf("\nTekan Enter untuk melanjutkan...");
     while (getchar() != '\n');
 }
 
 void trim(char *word)
 {
+    if(word == NULL || *word == '\0') return;
+
     char *start = word;
     while(isspace((unsigned char)*start)) start++;
 
@@ -108,16 +110,48 @@ TrieNode *createTrieNode()
 
 void insertToTrie(TrieNode *root, const char *word)
 {
+    if(word == NULL || word[0] == '\0' || root == NULL) return;
+
     TrieNode *curr = root;
-    while(*word)
+    char *wordCopy = NULL;
+
+    wordCopy = strdup(word);
+    if(wordCopy == NULL)
     {
-        int index = *word - 'a';
+        perror("Failed to allocate memory for word copy in insertToTrie");
+        return;
+    }
+
+    trim_and_tolower(wordCopy);
+
+    const char *currentChar = wordCopy;
+    while(*currentChar)
+    {
+        int index = *currentChar - 'a';
+        
+        if(index < 0 || index >= ALPHABET_SIZE)
+        {
+            fprintf(stderr, "Warning: Character '%c' out of 'a'-'z' range in insertToTrie after tolower. Skipping.\n", *currentChar);
+            currentChar++;
+            continue;
+        }
         if(curr->children[index] == NULL)
+        {
             curr->children[index] = createTrieNode();
+            if(!curr->children[index])
+            {
+                fprintf(stderr, "Failed to create TrieNode in insertToTrie.\n");
+                free(wordCopy); // Clean up allocated copy
+                return;
+            }
+        }
         curr = curr->children[index];
-        word++;
+        currentChar++;
     }
     curr->isEndOfWord = 1;
+
+    free(wordCopy);
+    wordCopy = NULL;
 }
 
 // Tambah kata baru ke hash table
@@ -134,6 +168,8 @@ void addWord(const char *word, const int condition)
 
     newEntry->next = hashTable[index];
     hashTable[index] = newEntry;
+
+    insertToTrie(rootTrie, word);
 
     if(condition)
     {
@@ -177,6 +213,122 @@ void addSynonym(const char *word, const char *synonym, const int condition)
             pushHistory(action);
             free(action); // Jangan lupa membebaskan memori
         }
+    }
+}
+
+void deleteWordEntry(const char *word)
+{
+    if (word == NULL || word[0] == '\0') {
+        printf("Error: Cannot delete an empty or NULL word.\n");
+        return;
+    }
+
+    unsigned int index = hash(word);
+    WordEntry *current = hashTable[index];
+    WordEntry *prev = NULL;
+
+    while(current != NULL && strcmp(current->word, word) != 0)
+    {
+        prev = current;
+        current = current->next;
+    }
+
+    if(current == NULL)
+    {
+        printf("Word entry '%s' not found for deletion.\n", word);
+        return;
+    }
+
+    if(prev == NULL)
+    {
+        hashTable[index] = current->next;
+    } 
+    else
+    {
+        prev->next = current->next;
+    } 
+
+    SynonymNode *syn = current->synonyms;
+    while(syn != NULL)
+    {
+        SynonymNode *synTemp = syn;
+        syn = syn->next;
+
+        free(synTemp->word);
+        synTemp->word = NULL;
+        free(synTemp);
+        synTemp = NULL;
+    }
+    current->synonyms = NULL;
+
+    free(current->word);
+    current->word = NULL;
+
+    free(current);
+    current = NULL;
+
+    int len = snprintf(NULL, 0, "Delete %s from word entry", word);
+    char *action = malloc(len + 1);
+    if(action)
+    {
+        snprintf(action, len + 1, "Delete %s from word entry", word);
+        pushHistory(action);
+        free(action);
+    }
+}
+
+void deleteSynonym(const char *word, const char *synonym)
+{
+    if (word == NULL || word[0] == '\0' || synonym == NULL || synonym[0] == '\0') {
+        printf("Error: Word or synonym to delete cannot be empty or NULL.\n");
+        return;
+    }
+
+    WordEntry *entry = findWord(word);
+    if(!entry)
+    {
+        printf("Word entry '%s' not found.\n", word);
+        return;
+    }
+
+    SynonymNode *currentSyn = entry->synonyms;
+    SynonymNode *prevSyn = NULL;
+
+    while (currentSyn != NULL && strcmp(currentSyn->word, synonym) != 0)
+    {
+        prevSyn = currentSyn;
+        currentSyn = currentSyn->next;
+    }
+    
+    if(currentSyn == NULL)
+    {
+        printf("Synonym '%s' not found for word '%s'.\n", synonym, word);
+        return;
+    }
+
+    if(prevSyn == NULL) 
+    {
+        entry->synonyms = currentSyn->next;
+    }
+    else 
+    {
+        prevSyn->next = currentSyn->next;    
+    }
+
+    free(currentSyn->word);
+    currentSyn->word = NULL;
+    free(currentSyn);
+    currentSyn = NULL;
+
+    printf("Synonym '%s' deleted successfully from word '%s'.\n", synonym, word);
+
+    int len = snprintf(NULL, 0, "Delete %s from %s", synonym, word);
+    char *action = malloc(len + 1);
+    if (action)
+    {
+        snprintf(action, len + 1, "Delete %s from %s", synonym, word);
+        pushHistory(action);
+        free(action);
     }
 }
 
@@ -355,9 +507,8 @@ void loadFromFileSynonym(const char *filename)
         char *word = strtok(line, ":\n");
         if (word)
         {
-            trim_and_tolower(word);
+            trim_and_tocapital(word);
             addWord(word, condition);
-            insertToTrie(rootTrie, word);
 
             token = strtok(NULL, "\n");
             if (token)
@@ -391,8 +542,10 @@ void menu(void)
         printf("3. Find synonyms words\n");
         printf("4. Add new entry word\n");
         printf("5. Add synonyms to entry words\n");
-        printf("6. View history\n");
-        printf("7. Save and exit\n");
+        printf("6. Delete entry word\n");
+        printf("7. Delete synonym from entry words\n");
+        printf("8. View history\n");
+        printf("9. Save and exit\n");
         printf("Pilihan: ");
         scanf("%d", &choice);
         getchar(); // consume newline
@@ -408,35 +561,56 @@ void menu(void)
             pauseProgram();
             break;
         case 3:
-            printf("Masukkan kata: ");
+            printf("Enter entry word: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
-            trim_and_tolower(word);
+            trim_and_tocapital(word);
             printSynonyms(word);
             break;
         case 4:
-            printf("Masukkan kata baru: ");
+            printf("Enter new entry: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
-            trim_and_tolower(word);
+            trim_and_tocapital(word);
             addWord(word, condition);
             break;
         case 5:
-            printf("Masukkan kata: ");
+            printf("Enter entry word: ");
             fgets(word, sizeof(word), stdin);
             word[strcspn(word, "\n")] = 0;
-            trim_and_tolower(word);
+            trim_and_tocapital(word);
 
-            printf("Masukkan sinonim: ");
+            printf("Enter new synoynm word: ");
             fgets(synonym, sizeof(synonym), stdin);
             synonym[strcspn(synonym, "\n")] = 0;
             trim_and_tocapital(synonym);
             addSynonym(word, synonym, condition);
             break;
         case 6:
-            printHistory();
+            printf("Enter entry word for delete: ");
+            fgets(word, sizeof(word), stdin);
+            word[strcspn(word, "\n")] = 0;
+            trim_and_tocapital(word);
+            deleteWordEntry(word);
             break;
         case 7:
+            printf("Enter entry word: ");
+            fgets(word, sizeof(word) ,stdin);
+            word[strcspn(word, "\n")] = 0;
+            trim_and_tocapital(word); 
+
+            printf("Enter synonym word to delete: ");
+            fgets(synonym, sizeof(synonym), stdin);
+            synonym[strcspn(synonym, "\n")] = 0;
+            trim_and_tocapital(synonym);
+
+            deleteSynonym(word, synonym);
+            break;
+        case 8:
+            printHistory();
+            pauseProgram();
+            break;
+        case 9:
             saveToFileSynonym(SYNONYM_FILE);
             saveToFileHistory(HISTORY_FILE);
             printf("Data disimpan.\n");
@@ -446,5 +620,5 @@ void menu(void)
         }
         sleep(1);
         clearScreen();
-    } while (choice != 7);
+    } while (choice != 9);
 }
