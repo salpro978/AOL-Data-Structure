@@ -128,8 +128,8 @@ Upon running the application, you will be presented with a menu. Follow the on-s
 * Add new words.
 * Add synonyms to existing words.
 * Search for a word and display its synonyms.
-* Display all words in the dictionary.
-* Save the current dictionary to a file (e.g., `dictionary.txt`).
+* Display all word entries in the dictionary.
+* Save the current dictionary to a file (e.g., `synonymList.txt`).
 * Load an existing dictionary from a file.
 * (Potentially) View history or undo actions, depending on implementation status. (ongoing)
 
