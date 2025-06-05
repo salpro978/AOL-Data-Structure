@@ -17,18 +17,26 @@ A command-line application for managing words and their synonyms, built in C. Th
 
 ## Features
 
-* **Add Words:** Introduce new words into the dictionary.
-* **Add Synonyms:** Link synonyms to existing words.
-* **View Synonyms:** Display all synonyms for a specific word.
-* **View All Words:** List all unique words currently stored in the dictionary.
-* **Persistent Storage:**
-  * Save the current dictionary (words and their synonyms) to a file.
-    * Load a previously saved dictionary from a file.
-* **Action History:** Keeps a log of actions performed (though specific history functions need to be implemented in `history.c`).
-* **Undo Functionality (Implied):** Data structure `UndoAction` suggests a planned or existing feature to revert actions.
-* **Text Normalization:** Utility functions to trim whitespace and convert case (lowercase, capitalize).
-* **Menu-Driven Interface:** Easy-to-use menu for interacting with the application.
-* **Hash Table Implementation:** Uses a hash table (`HASH_SIZE 503`) for efficient word lookup and storage, with chaining for collision resolution.
+* **Word Management:**
+  * Add new words to dictionary.
+  * Delete existing words from the dictionary.
+* **Synonym Management:**
+  * Add synonyms to existing words.
+  * View synonyms for a specific word.
+  * Delete specific synonyms from a word.
+* **Viewing Options::**
+  * View all words along with their synonyms.
+  * View all word entries (sorted alphabetically using a Trie).
+* **History Tracking:**
+  * Automatically records actions like adding words, adding synonyms, and deleting entries.
+  * View the action history with timestamps.
+* **Data Persistence:**
+  * Saves the dictionary (words and synonyms) to `synonymList.txt`.
+  * Saves the action history to `history.txt`.
+  * Loads existing dictionary and history data on startup.
+* **Input Processing:**
+  * Trims whitespace from user input.
+  * Normalizes word casing for consistent storage and lookup (main words stored capitalized, Trie uses lowercase for sorting/display).
 
 ## Technologies Used
 
