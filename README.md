@@ -31,12 +31,14 @@ A command-line application for managing words and their synonyms, built in C. Th
   * Automatically records actions like adding words, adding synonyms, and deleting entries.
   * View the action history with timestamps.
 * **Data Persistence:**
-  * Saves the dictionary (words and synonyms) to `synonymList.txt`.
-  * Saves the action history to `history.txt`.
+  * Saves the dictionary (words and synonyms) to `synonymList.txt` upon exit.
+  * Saves the action history to `history.txt` upon exit.
   * Loads existing dictionary and history data on startup.
 * **Input Processing:**
   * Trims whitespace from user input.
   * Normalizes word casing for consistent storage and lookup (main words stored capitalized, Trie uses lowercase for sorting/display).
+* **Memory Management:**
+  * Properly frees all alocated memory for the hash table, trie, and history log on exit to prevent leaks.
 
 ## Technologies Used
 
@@ -47,10 +49,10 @@ A command-line application for managing words and their synonyms, built in C. Th
 
 The project consists of the following main files:
 
-* `main.c`: The main driver of the program, likely containing the `main()` function and menu logic.
-* `synonym.c`: Contains functions related to managing words and synonyms, file operations, and hash table logic.
-* `history.c`: (To be implemented) Will contain functions related to managing the action history.
-* `functions.h`: The header file containing all structure definitions, global variable declarations, and function prototypes.
+* `main.c`: The main driver of the program. It initializes data structures, loads data from files, calls the main menu, and handles memory cleanup before exiting.
+* `synonym.c`: Contains the core application logic, including management of the hash table and Trie, all word/synonym functions, the main menu loop, and file I/O for synonyms.
+* `history.c`: Contains all functions related to managing the action history, including adding new entries, printing the history, and saving/loading the history log from a file.
+* `dictionary.h`: The central header file containing all structure definitions (`WordEntry`, `SynonymNode`, `TrieNode`, `HistoryNode`), global variable declarations, function prototypes, and constants.
 
 ## Getting Started
 
@@ -133,13 +135,15 @@ Once compiled successfully, an executable file named `program` will be created.
 
 Upon running the application, you will be presented with a menu. Follow the on-screen prompts to:
 
-* Add new words.
-* Add synonyms to existing words.
-* Search for a word and display its synonyms.
-* Display all word entries in the dictionary.
-* Save the current dictionary to a file (e.g., `synonymList.txt`).
-* Load an existing dictionary from a file.
-* (Potentially) View history or undo actions, depending on implementation status. (ongoing)
+1. **View all words and synonyms:** Displays every word in the dictionary followed by its list of synonyms.
+2. **View all words entry:** Displays all primary words, categorized and sorted alphabetically.
+3. **Find synonyms words:** Search for a word and display its synonyms.
+4. **Add new entry word:** Add a new primary word to the dictionary.
+5. **Add synonyms to entry words:** Add a new synonym to an existing primary word.
+6. **Delete entry word:** Delete a primary word and all of its associated synonyms.
+7. **Delete synonym from entry words:** Delete a single synonym from a primary word.
+8. **View history:** Display the log of all actions taken.
+9. **Save and exit:** Saves all changes to synonymList.txt and history.txt, then closes the application.
 
 ## Data Structures
 
@@ -154,10 +158,9 @@ The program utilizes several custom data structures:
   * `SynonymNode* synonyms`: A pointer to the head of a linked list of its synonyms.
   * `struct WordEntry* next`: Points to the next `WordEntry` in case of a hash collision (separate chaining).
 
-* **`UndoAction`**: Designed for an undo stack, likely to store information needed to revert an action.
-  * `char* word`: The primary word involved in the action.
-  * `char* synonym`: The synonym involved, if applicable.
-  * `struct UndoAction* next`: Points to the next action in the undo stack.
+* **`TrieNode`**: Represents a single node in a Trie data structure, used for efficient prefix-based word searching and auto-completion.
+  * `struct TrieNode *children[ALPHABET_SIZE]`: An array of pointers, where each index corresponds to a letter of the alphabet. A non-null pointer indicates that the character exists as a child of the current node, continuing a word path.
+  * `int isEndOfWord`: A boolean flag (typically `1` for true) that marks the node as the final character of a valid, complete word.
 
 * **`HistoryNode`**: Represents an entry in the action history log.
   * `char* action`: Describes the action performed (e.g., "Added word", "Added synonym").
